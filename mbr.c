@@ -79,7 +79,7 @@ ssize_t mbrWrite(MBRPartition *mbr, void *buf, size_t count) {
     return mbrWrite(mbr->vdi, buf, count);
 }
 
-ssize_t lseek(MBRPartition *mbr, ssize_t offset, int whence) {
+off_t mbrSeek(MBRPartition *mbr, off_t offset, int whence) {
     if (!mbr) return -1;
 
     off_t newCursor;
