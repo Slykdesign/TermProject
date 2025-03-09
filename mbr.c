@@ -76,10 +76,10 @@ ssize_t mbrWrite(MBRPartition *mbr, void *buf, size_t count) {
         count = mbr->size - mbr->cursor; // Restrict to partition size
     }
 
-    return mbrWrite(mbr->vdi, buf, count);
+    return mbrWrite((MBRPartition *)mbr->vdi, buf, count);
 }
 
-off_t mbrSeek(MBRPartition *mbr, off_t offset, int whence) {
+ssize_t mbrLseek(MBRPartition *mbr, ssize_t offset, int whence) {
     if (!mbr) return -1;
 
     off_t newCursor;
