@@ -1,61 +1,39 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <stdint.h>
-#include <fcntl.h>
-#include <unistd.h>
 #include <ctype.h>
-#include <string.h>
+#include "vdi.h"
+#include "mbr.h"
 
 #define BUFFER_SIZE 256
 
 // Function prototypes
 void displayBufferPage(uint8_t *buf, uint32_t count, uint32_t skip, uint64_t offset);
 void displayBuffer(uint8_t *buf, uint32_t count, uint64_t offset);
+void displayVDIHeader(VDIFile *vdi);
 
 int main() {
-    const char *filename = "testfile.bin";  // Sample file to read/write
-    int fd;
-    uint8_t buffer[BUFFER_SIZE];
+    VDIFile *vdi = vdiOpen("VDI Test Files/good-dynamic-2k.7z");
+    if (!vdi) return 1;
 
-    // Step 1: Open the file
-    fd = open(filename, O_RDWR | O_CREAT, 0644);
-    if (fd == -1) {
-        perror("Error opening file");
+    displayVDIHeader(vdi);
+
+    MBRPartition *partition = mbrOpen(vdi, 0);
+    if (!partition) {
+        printf("Failed to open MBR\n");
+        vdiClose(vdi);
         return 1;
     }
 
-    // Step 2: Write some sample data
-    memset(buffer, 0, BUFFER_SIZE);
-    strcpy((char *)buffer, "This is a sample file content for testing.");
+    char buffer[512];
+    vdiSeek(vdi, 0, SEEK_SET);
+    vdiRead(vdi, buffer, 512);
+    printf("Read first sector:\n%.*s\n", 512, buffer);
 
-    if (write(fd, buffer, BUFFER_SIZE) == -1) {
-        perror("Error writing to file");
-        close(fd);
-        return 1;
-    }
-
-    // Step 3: Reset cursor to the beginning
-    lseek(fd, 0, SEEK_SET);
-
-    // Step 4: Read the file into buffer
-    memset(buffer, 0, BUFFER_SIZE);
-    if (read(fd, buffer, BUFFER_SIZE) == -1) {
-        perror("Error reading file");
-        close(fd);
-        return 1;
-    }
-
-    // Step 5: Display the buffer contents
-    displayBuffer(buffer, BUFFER_SIZE, 0);
-
-    // Step 6: Close the file
-    close(fd);
-
+    vdiClose(vdi);
     return 0;
 }
 
 // Function Definitions
-
 void displayBufferPage(uint8_t *buf, uint32_t count, uint32_t skip, uint64_t offset) {
     printf("Offset: 0x%lx\n", offset);
     for (uint32_t i = skip; i < count; i += 16) {
