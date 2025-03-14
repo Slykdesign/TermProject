@@ -12,7 +12,7 @@ void displayBuffer(uint8_t *buf, uint32_t count, uint64_t offset);
 void displayVDIHeader(VDIFile *vdi);
 
 int main() {
-    VDIFile *vdi = vdiOpen("VDI Test Files/good-dynamic-2k.7z");
+    VDIFile *vdi = vdiOpen("VDI Test Files/good-dynamic-2k.vdi");
     if (!vdi) return 1;
 
     displayVDIHeader(vdi);
