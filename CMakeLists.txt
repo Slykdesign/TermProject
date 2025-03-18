@@ -8,4 +8,6 @@ add_executable(TermProject main.c
         vidi.c
         mbr.h
         mbr.c
+        ext2.h
+        ext2.c
 )
