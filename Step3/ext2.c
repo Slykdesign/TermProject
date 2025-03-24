@@ -10,7 +10,6 @@
 Ext2File *ext2Open(VDIFile *vdi) {
     MBRPartition *partition = NULL;
 
-
     // Open first Linux partition (0x83)
     for (int i = 0; i < 4; i++) {
         MBRPartition *tempPart = mbrOpen(vdi, i);
@@ -72,17 +71,7 @@ bool writeBlock(Ext2File *filesize, uint32_t blockNum, void *buf) {
 }
 
 bool fetchSuperblock(Ext2File *filesize, uint32_t blockNum, void *sb) {
-    off_t offset = filesize->partition->start + 1024;  // Superblock is always at 1024-byte offset
-    lseek(filesize->partition->vdi->fd, offset, SEEK_SET);
-    ssize_t bytesRead = read(filesize->partition->vdi->fd, sb, 1024);
-
-    if (bytesRead != 1024) {
-        printf("Error: Failed to read superblock (read %ld bytes)\n", bytesRead);
-        return false;
-    }
-
-    printf("Debug: Successfully read superblock at offset %ld\n", offset);
-    return true;
+    return fetchBlock(filesize, filesize->firstDataBlock + blockNum, sb);
 }
 
 bool writeSuperblock(Ext2File *filesize, uint32_t blockNum, void *sb) {
@@ -90,11 +79,11 @@ bool writeSuperblock(Ext2File *filesize, uint32_t blockNum, void *sb) {
 }
 
 bool fetchBGDT(Ext2File *filesize, uint32_t blockNum, void *bgdt) {
-    return fetchBGDT(filesize, filesize->firstDataBlock + blockNum, bgdt);
+    return fetchBlock(filesize, filesize->firstDataBlock + blockNum, bgdt);
 }
 
-bool writeBGDT(Ext2File *filesize,uint32_t blockNum, void *bgdt) {
-    return writeBGDT(filesize, filesize->firstDataBlock + blockNum, bgdt);
+bool writeBGDT(Ext2File *filesize, uint32_t blockNum, void *bgdt) {
+    return writeBlock(filesize, filesize->firstDataBlock + blockNum, bgdt);
 }
 
 void ext2Close(Ext2File *filesize) {
