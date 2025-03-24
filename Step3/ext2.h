@@ -1,16 +1,15 @@
 #ifndef EXT2_H
 #define EXT2_H
 
-#include <stdbool.h>
 #include "mbr.h"
 
 typedef struct {
-    MBRPartition *partition;  // Opened partition containing ext2 filesystem
-    uint32_t blockSize;       // File system block size
-    uint32_t numBlockGroups;  // Number of block groups
-    uint32_t firstDataBlock;  // First data block in the filesystem
-    uint32_t totalInodes;     // Total inodes in filesystem
-    uint32_t totalBlocks;     // Total blocks in filesystem
+    MBRPartition *partition;
+    uint32_t blockSize;
+    uint32_t numBlockGroups;
+    uint32_t firstDataBlock;
+    uint32_t totalInodes;
+    uint32_t totalBlocks;
 } Ext2File;
 
 Ext2File *ext2Open(VDIFile *vdi);
