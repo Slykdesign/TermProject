@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <time.h>
 
 #define EXT2_SUPERBLOCK_OFFSET 1024
 #define EXT2_SUPERBLOCK_MAGIC 0xEF53
@@ -86,107 +85,34 @@ bool fetchSuperblock(Ext2File *filesize, uint32_t blockNum, void *superblock) {
 }
 
 bool writeSuperblock(Ext2File *filesize, uint32_t blockNum, void *superblock) {
-    off_t offset = filesize->partition->start + 1024;  // Superblock is always at 1024-byte offset
-    lseek(filesize->partition->vdi->fd, offset, SEEK_SET);
-    ssize_t bytesWritten = write(filesize->partition->vdi->fd, superblock, 1024);
-
-    if (bytesWritten != 1024) {
-        printf("Error: Failed to write superblock (wrote %ld bytes)\n", bytesWritten);
-        return false;
-    }
-
-    printf("Debug: Successfully wrote superblock at offset %ld\n", offset);
-    return true;
+    return writeBlock(filesize, filesize->firstDataBlock + blockNum, superblock);
 }
 
 bool fetchBGDT(Ext2File *filesize, uint32_t blockNum, void *bgdt) {
-    uint32_t bgdtBlock = filesize->firstDataBlock + blockNum;
-    return fetchBlock(filesize, bgdtBlock, bgdt);
+    return fetchBlock(filesize, filesize->firstDataBlock + blockNum, bgdt);
 }
 
 bool writeBGDT(Ext2File *filesize, uint32_t blockNum, void *bgdt) {
-    uint32_t bgdtBlock = filesize->firstDataBlock + blockNum;
-    return writeBlock(filesize, bgdtBlock, bgdt);
+    return writeBlock(filesize, filesize->firstDataBlock + blockNum, bgdt);
 }
 
 void displaySuperblock(Ext2File *filesize, void *superblock) {
-    printf("Superblock from block 0\n");
-    printf("Superblock contents:\n");
-    printf("Number of inodes: %u\n", *(uint32_t *)(superblock + 0));
-    printf("Number of blocks: %u\n", *(uint32_t *)(superblock + 4));
-    printf("Number of reserved blocks: %u\n", *(uint32_t *)(superblock + 8));
-    printf("Number of free blocks: %u\n", *(uint32_t *)(superblock + 12));
-    printf("Number of free inodes: %u\n", *(uint32_t *)(superblock + 16));
-    printf("First data block: %u\n", *(uint32_t *)(superblock + 20));
-    printf("Log block size: %u (%u)\n", *(uint32_t *)(superblock + 24), 1024 << *(uint32_t *)(superblock + 24));
-    printf("Log fragment size: %u (%u)\n", *(uint32_t *)(superblock + 28), 1024 << *(uint32_t *)(superblock + 28));
-    printf("Blocks per group: %u\n", *(uint32_t *)(superblock + 32));
-    printf("Fragments per group: %u\n", *(uint32_t *)(superblock + 36));
-    printf("Inodes per group: %u\n", *(uint32_t *)(superblock + 40));
-    printf("Last mount time: %s", ctime((time_t *)(superblock + 44)));
-    printf("Last write time: %s", ctime((time_t *)(superblock + 48)));
-    printf("Mount count: %u\n", *(uint16_t *)(superblock + 52));
-    printf("Max mount count: %u\n", *(uint16_t *)(superblock + 54));
-    printf("Magic number: 0x%X\n", *(uint16_t *)(superblock + 56));
-    printf("State: %u\n", *(uint16_t *)(superblock + 58));
-    printf("Error processing: %u\n", *(uint16_t *)(superblock + 60));
-    printf("Revision level: %u.%u\n", *(uint32_t *)(superblock + 62), *(uint32_t *)(superblock + 66));
-    printf("Last system check: %s", ctime((time_t *)(superblock + 70)));
-    printf("Check interval: %u\n", *(uint32_t *)(superblock + 74));
-    printf("OS creator: %u\n", *(uint32_t *)(superblock + 78));
-    printf("Default reserve UID: %u\n", *(uint16_t *)(superblock + 82));
-    printf("Default reserve GID: %u\n", *(uint16_t *)(superblock + 84));
-    printf("First inode number: %u\n", *(uint32_t *)(superblock + 88));
-    printf("Inode size: %u\n", *(uint16_t *)(superblock + 90));
-    printf("Block group number: %u\n", *(uint16_t *)(superblock + 92));
-    printf("Feature compatibility bits: 0x%08X\n", *(uint32_t *)(superblock + 96));
-    printf("Feature incompatibility bits: 0x%08X\n", *(uint32_t *)(superblock + 100));
-    printf("Feature read/only compatibility bits: 0x%08X\n", *(uint32_t *)(superblock + 104));
-    printf("UUID: %02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x\n",
-        ((uint8_t *)superblock)[108], ((uint8_t *)superblock)[109], ((uint8_t *)superblock)[110], ((uint8_t *)superblock)[111],
-        ((uint8_t *)superblock)[112], ((uint8_t *)superblock)[113], ((uint8_t *)superblock)[114], ((uint8_t *)superblock)[115],
-        ((uint8_t *)superblock)[116], ((uint8_t *)superblock)[117], ((uint8_t *)superblock)[118], ((uint8_t *)superblock)[119],
-        ((uint8_t *)superblock)[120], ((uint8_t *)superblock)[121], ((uint8_t *)superblock)[122], ((uint8_t *)superblock)[123]);
-    printf("Volume name: [%.*s]\n", 16, (char *)(superblock + 124));
-    printf("Last mount point: [%.*s]\n", 64, (char *)(superblock + 140));
-    printf("Algorithm bitmap: 0x%08X\n", *(uint32_t *)(superblock + 204));
-    printf("Number of blocks to preallocate: %u\n", *(uint8_t *)(superblock + 208));
-    printf("Number of blocks to preallocate for directories: %u\n", *(uint8_t *)(superblock + 209));
-    printf("Journal UUID: %02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x\n",
-        ((uint8_t *)superblock)[212], ((uint8_t *)superblock)[213], ((uint8_t *)superblock)[214], ((uint8_t *)superblock)[215],
-        ((uint8_t *)superblock)[216], ((uint8_t *)superblock)[217], ((uint8_t *)superblock)[218], ((uint8_t *)superblock)[219],
-        ((uint8_t *)superblock)[220], ((uint8_t *)superblock)[221], ((uint8_t *)superblock)[222], ((uint8_t *)superblock)[223],
-        ((uint8_t *)superblock)[224], ((uint8_t *)superblock)[225], ((uint8_t *)superblock)[226], ((uint8_t *)superblock)[227]);
-    printf("Journal inode number: %u\n", *(uint32_t *)(superblock + 228));
-    printf("Journal device number: %u\n", *(uint32_t *)(superblock + 232));
-    printf("Journal last orphan inode number: %u\n", *(uint32_t *)(superblock + 236));
-    printf("Default hash version: %u\n", *(uint8_t *)(superblock + 240));
-    printf("Default mount option bitmap: 0x%08X\n", *(uint32_t *)(superblock + 241));
-    printf("First meta block group: %u\n", *(uint32_t *)(superblock + 245));
+    printf("Superblock Information:\n");
+    printf("Total Inodes: %u\n", *(uint32_t *)(superblock + 0));
+    printf("Total Blocks: %u\n", *(uint32_t *)(superblock + 4));
+    printf("Block Size: %u\n", filesize->blockSize);
+    printf("First Data Block: %u\n", *(uint32_t *)(superblock + 20));
+    printf("Magic Number: 0x%X\n", *(uint16_t *)(superblock + 56));
 }
 
 void displayBGDT(Ext2File *filesize, void *bgdt) {
-    printf("\nBlock group descriptor table:\n");
-    printf("Block Block Inode Inode Free Free Used\n");
-    printf("Number Bitmap Bitmap Table Blocks Inodes Dirs\n");
-
-    for (uint32_t i = 0; i < filesize->numBlockGroups; i++) {
-        uint32_t blockBitmap = *(uint32_t *)(bgdt + i * 32);
-        uint32_t inodeBitmap = *(uint32_t *)(bgdt + i * 32 + 4);
-        uint32_t inodeTable = *(uint32_t *)(bgdt + i * 32 + 8);
-        uint16_t freeBlocks = *(uint16_t *)(bgdt + i * 32 + 12);
-        uint16_t freeInodes = *(uint16_t *)(bgdt + i * 32 + 14);
-        uint16_t usedDirs = *(uint16_t *)(bgdt + i * 32 + 16);
-
-        printf("%6u %6u %6u %5u %6u %6u %4u\n",
-            i,
-            blockBitmap,
-            inodeBitmap,
-            inodeTable,
-            freeBlocks,
-            freeInodes,
-            usedDirs);
-    }
+    printf("\nBlock Group Descriptor Table:\n");
+    printf("Block Bitmap: %u\n", *(uint32_t *)(bgdt + 0));
+    printf("Inode Bitmap: %u\n", *(uint32_t *)(bgdt + 4));
+    printf("Inode Table: %u\n", *(uint32_t *)(bgdt + 8));
+    printf("Free Blocks Count: %u\n", *(uint16_t *)(bgdt + 12));
+    printf("Free Inodes Count: %u\n", *(uint16_t *)(bgdt + 14));
+    printf("Used Directories Count: %u\n", *(uint16_t *)(bgdt + 16));
 }
 
 void ext2Close(Ext2File *filesize) {
