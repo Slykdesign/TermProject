@@ -14,11 +14,9 @@
 //  All space in an ext2 partition is divided into fixed-size blocks.
 // The size of the blocks is determined by the superblock. With one exception, all disk access is performed by reading or writing entire blocks.
 //  To that end, you will need two block access functions:
-//  • bool fetchBlock(struct Ext2File *f,uint32_t blockNum,
-//  void *buf)
+//  • bool fetchBlock(struct Ext2File *f, uint32_t blockNum, void *buf)
 //  Read the given block number from the file system into the buffer. Return true if successful, false if the read fails.
-//  • bool writeBlock(struct Ext2File *f,uint32_t blockNum,
-//  void *buf)
+//  • bool writeBlock(struct Ext2File *f,uint32_t blockNum, void *buf)
 //  Write the buffer to the given block in the file system. Return true if successful, false if the write fails.
 //  There is one slight quirk in how the disk space is laid out; the main superblock (see next section) is always located in block zero.
 //  However, in a 1KB file system, that is the second physical 1KB block of space.
