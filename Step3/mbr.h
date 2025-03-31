@@ -8,6 +8,7 @@ typedef struct {
     uint32_t start;       // Start of the partition (in bytes)
     uint32_t size;        // Size of the partition (in bytes)
     size_t cursor;        // Current cursor position
+    uint8_t type;         // Partition type
 } MBRPartition;
 
 MBRPartition *mbrOpen(VDIFile *vdi, int part);
