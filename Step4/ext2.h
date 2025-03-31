@@ -50,17 +50,17 @@ typedef struct {
     uint32_t i_file_acl;
     uint32_t i_dir_acl;
     uint32_t i_faddr;
-    uint8_t i_osd2[12];
-} Inode;
+    uint8_t  i_osd2[12];
+} Ext2Inode;
 
 // Define the Ext2 File structure
 typedef struct {
     VDIFile *vdi;                  // Pointer to the VDI file
+    MBRPartition *partition;       // Pointer to the partition
     Ext2Superblock superblock;     // Superblock structure
     Ext2BlockGroupDescriptor *bgdt; // Block group descriptor table
     uint32_t block_size;           // Block size
     uint32_t num_block_groups;     // Number of block groups
-    MBRPartition *partition;       // Partition containing the ext2 filesystem
 } Ext2File;
 
 // Function prototypes
@@ -72,12 +72,10 @@ bool fetchSuperblock(Ext2File *ext2, uint32_t blockNum, Ext2Superblock *sb);
 bool writeSuperblock(Ext2File *ext2, uint32_t blockNum, Ext2Superblock *sb);
 bool fetchBGDT(Ext2File *ext2, uint32_t blockNum, Ext2BlockGroupDescriptor *bgdt);
 bool writeBGDT(Ext2File *ext2, uint32_t blockNum, Ext2BlockGroupDescriptor *bgdt);
-int32_t fetchInode(Ext2File *ext2, uint32_t iNum, Inode *buf);
-int32_t writeInode(Ext2File *ext2, uint32_t iNum, Inode *buf);
-int32_t inodeInUse(Ext2File *ext2, uint32_t iNum);
-uint32_t allocateInode(Ext2File *ext2, int32_t group);
-int32_t freeInode(Ext2File *ext2, uint32_t iNum);
-int32_t fetchBlockFromFile(Ext2File *ext2, Inode *inode, uint32_t bNum, void *buf);
-int32_t writeBlockToFile(Ext2File *ext2, Inode *inode, uint32_t bNum, void *buf);
+int32_t fetchInode(Ext2File *f, uint32_t iNum, Ext2Inode *buf);
+int32_t writeInode(Ext2File *f, uint32_t iNum, Ext2Inode *buf);
+int32_t inodeInUse(Ext2File *f, uint32_t iNum);
+uint32_t allocateInode(Ext2File *f, int32_t group);
+int32_t freeInode(Ext2File *f, uint32_t iNum);
 
-#endif // EXT2_H
+#endif
