@@ -14,6 +14,7 @@ void displayBuffer(uint8_t *buf, uint32_t count, uint64_t offset);
 void displaySuperblock(Ext2Superblock *sb);
 void printUUID(uint8_t *uuid);
 void displayBGDT(Ext2BlockGroupDescriptor *bgdt, uint32_t num_groups);
+void displayInode(Ext2Inode *inode);
 
 int main() {
     VDIFile *vdi = vdiOpen("./good-fixed-1k.vdi");
@@ -38,6 +39,23 @@ int main() {
 
     printf("Block group descriptor table:\n");
     displayBGDT(ext2->bgdt, ext2->num_block_groups);
+
+    // Fetch and display inode 2 (root inode)
+    Ext2Inode inode;
+    if (fetchInode(ext2, 2, &inode) == 0) {
+        printf("Inode 2 (Root):\n");
+        displayInode(&inode);
+    } else {
+        fprintf(stderr, "Failed to fetch inode 2.\n");
+    }
+
+    // Fetch and display inode 11 (lost+found)
+    if (fetchInode(ext2, 11, &inode) == 0) {
+        printf("Inode 11 (lost+found):\n");
+        displayInode(&inode);
+    } else {
+        fprintf(stderr, "Failed to fetch inode 11.\n");
+    }
 
     closeExt2(ext2);
     vdiClose(vdi);
@@ -138,4 +156,26 @@ void displayBGDT(Ext2BlockGroupDescriptor *bgdt, uint32_t num_groups) {
                bgdt[i].bg_free_inodes_count,
                bgdt[i].bg_used_dirs_count);
     }
+}
+
+void displayInode(Ext2Inode *inode) {
+    printf("Mode: %o\n", inode->i_mode);
+    printf("Size: %u\n", inode->i_size);
+    printf("Blocks: %u\n", inode->i_blocks);
+    printf("UID / GID: %u / %u\n", inode->i_uid, inode->i_gid);
+    printf("Links: %u\n", inode->i_links_count);
+    printf("Created: %s", ctime((time_t *)&inode->i_ctime));
+    printf("Last access: %s", ctime((time_t *)&inode->i_atime));
+    printf("Last modification: %s", ctime((time_t *)&inode->i_mtime));
+    printf("Deleted: %s", ctime((time_t *)&inode->i_dtime));
+    printf("Flags: %08x\n", inode->i_flags);
+    printf("File version: %u\n", inode->i_generation);
+    printf("ACL block: %u\n", inode->i_file_acl);
+    printf("Direct blocks: ");
+    for (int i = 0; i < 12; i++) {
+        printf("%u ", inode->i_block[i]);
+    }
+    printf("\nSingle indirect block: %u\n", inode->i_block[12]);
+    printf("Double indirect block: %u\n", inode->i_block[13]);
+    printf("Triple indirect block: %u\n", inode->i_block[14]);
 }
