@@ -57,6 +57,19 @@ int main() {
         fprintf(stderr, "Failed to fetch inode 11.\n");
     }
 
+    uint8_t buffer[1024];
+    if (fetchBlockFromFile(&inode, 0, buffer) == 0) {
+        printf("Block 0 fetched successfully.\n");
+    } else {
+        fprintf(stderr, "Failed to fetch block 0.\n");
+    }
+
+    if (writeBlockToFile(&inode, 0, buffer) == 0) {
+        printf("Block 0 written successfully.\n");
+    } else {
+        fprintf(stderr, "Failed to write block 0.\n");
+    }
+
     closeExt2(ext2);
     vdiClose(vdi);
     return 0;
