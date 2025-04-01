@@ -1,6 +1,8 @@
 #include "vdi.h"
 #include "mbr.h"
 #include "ext2.h"
+#include "inode.h"
+#include "fileac.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -57,6 +59,7 @@ int main() {
         fprintf(stderr, "Failed to fetch inode 11.\n");
     }
 
+    // Example usage of new functions
     uint8_t buffer[1024];
     if (fetchBlockFromFile(&inode, 0, buffer) == 0) {
         printf("Block 0 fetched successfully.\n");
