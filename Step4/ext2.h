@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include "mbr.h"
 #include "vdi.h"
+#include "inode.h"
 
 typedef struct {
     uint32_t s_inodes_count;
