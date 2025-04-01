@@ -27,8 +27,6 @@ void displayPartitionTable(VDIFile *vdi) {
         printf("Partition %d:\n", i);
         printf("  Status: %s\n", (partitions[i].status == 0x80) ? "Active" : "Inactive");
         printf("  Type: 0x%02x\n", partitions[i].type);
-        printf("  CHS First: %02x%02x%02x\n", partitions[i].chsFirst[0], partitions[i].chsFirst[1], partitions[i].chsFirst[2]);
-        printf("  CHS Last: %02x%02x%02x\n", partitions[i].chsLast[0], partitions[i].chsLast[1], partitions[i].chsLast[2]);
         printf("  Start LBA: %u\n", partitions[i].lbaFirst);
         printf("  Sector Count: %u\n", partitions[i].lbaCount);
     }
@@ -53,7 +51,6 @@ MBRPartition *mbrOpen(VDIFile *vdi, int part) {
     mbr->start = partitions[part].lbaFirst * SECTOR_SIZE;
     mbr->size = partitions[part].lbaCount * SECTOR_SIZE;
     mbr->cursor = 0;
-    mbr->type = partitions[part].type; // Set the partition type
 
     return mbr;
 }
