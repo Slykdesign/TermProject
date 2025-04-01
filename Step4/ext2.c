@@ -103,3 +103,47 @@ void displayInode(Ext2Inode *inode) {
     printf("Double indirect block: %u\n", inode->i_block[13]);
     printf("Triple indirect block: %u\n", inode->i_block[14]);
 }
+
+bool fetchBlock(Ext2File *ext2, uint32_t blockNum, void *buf) {
+    if (!ext2 || !buf) return false;
+    off_t offset = blockNum * ext2->block_size;
+    if (vdiSeek(ext2->vdi, offset, SEEK_SET) != offset) return false;
+    if (vdiRead(ext2->vdi, buf, ext2->block_size) != ext2->block_size) return false;
+    return true;
+}
+
+bool writeBlock(Ext2File *ext2, uint32_t blockNum, void *buf) {
+    if (!ext2 || !buf) return false;
+    off_t offset = blockNum * ext2->block_size;
+    if (vdiSeek(ext2->vdi, offset, SEEK_SET) != offset) return false;
+    if (vdiWrite(ext2->vdi, buf, ext2->block_size) != ext2->block_size) return false;
+    return true;
+}
+
+bool fetchSuperblock(Ext2File *ext2, uint32_t blockNum, Ext2Superblock *sb) {
+    uint8_t buf[ext2->block_size];
+    if (!fetchBlock(ext2, blockNum, buf)) return false;
+    memcpy(sb, buf + 1024 % ext2->block_size, sizeof(Ext2Superblock));
+    return true;
+}
+
+bool writeSuperblock(Ext2File *ext2, uint32_t blockNum, Ext2Superblock *sb) {
+    uint8_t buf[ext2->block_size];
+    if (!fetchBlock(ext2, blockNum, buf)) return false;
+    memcpy(buf + 1024 % ext2->block_size, sb, sizeof(Ext2Superblock));
+    return writeBlock(ext2, blockNum, buf);
+}
+
+bool fetchBGDT(Ext2File *ext2, uint32_t blockNum, Ext2BlockGroupDescriptor *bgdt) {
+    uint8_t buf[ext2->block_size];
+    if (!fetchBlock(ext2, blockNum, buf)) return false;
+    memcpy(bgdt, buf, ext2->num_block_groups * sizeof(Ext2BlockGroupDescriptor));
+    return true;
+}
+
+bool writeBGDT(Ext2File *ext2, uint32_t blockNum, Ext2BlockGroupDescriptor *bgdt) {
+    uint8_t buf[ext2->block_size];
+    if (!fetchBlock(ext2, blockNum, buf)) return false;
+    memcpy(buf, bgdt, ext2->num_block_groups * sizeof(Ext2BlockGroupDescriptor));
+    return writeBlock(ext2, blockNum, buf);
+}
