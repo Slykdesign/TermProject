@@ -1,12 +1,9 @@
 #ifndef EXT2_H
 #define EXT2_H
 
-#include <stdbool.h>
-#include <stdint.h>
-#include "mbr.h"
-#include "vdi.h"
 #include "inode.h"
 
+// Define the Ext2 Superblock structure
 typedef struct {
     uint32_t s_inodes_count;
     uint32_t s_blocks_count;
@@ -70,20 +67,17 @@ typedef struct {
     uint32_t bg_reserved[3];
 } Ext2BlockGroupDescriptor;
 
+// Define the Ext2 File structure
 typedef struct {
     VDIFile *vdi;                  // Pointer to the VDI file
-    MBRPartition *partition;
-    uint32_t blockSize;
-    uint32_t numBlockGroups;
-    uint32_t firstDataBlock;
-    uint32_t totalInodes;
-    uint32_t totalBlocks;
+    MBRPartition *partition;       // Pointer to the partition
     Ext2Superblock superblock;     // Superblock structure
     Ext2BlockGroupDescriptor *bgdt; // Block group descriptor table
     uint32_t block_size;           // Block size
     uint32_t num_block_groups;     // Number of block groups
 } Ext2File;
 
+// Function prototypes
 Ext2File *openExt2(const char *filename);
 void closeExt2(Ext2File *ext2);
 bool fetchBlock(Ext2File *ext2, uint32_t blockNum, void *buf);
