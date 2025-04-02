@@ -80,17 +80,16 @@ typedef struct {
     uint32_t totalBlocks;
     Ext2Superblock superblock;     // Superblock structure
     Ext2BlockGroupDescriptor *bgdt; // Block group descriptor table
-    uint32_t block_size;           // Block size
-    uint32_t num_block_groups;     // Number of block groups
 } Ext2File;
 
 Ext2File *openExt2(const char *filename);
 void closeExt2(Ext2File *ext2);
 bool fetchBlock(Ext2File *ext2, uint32_t blockNum, void *buf);
-bool writeBlock(Ext2File *ext2, uint32_t blockNum, void *buf);
 bool fetchSuperblock(Ext2File *ext2, uint32_t blockNum, Ext2Superblock *sb);
-bool writeSuperblock(Ext2File *ext2, uint32_t blockNum, Ext2Superblock *sb);
 bool fetchBGDT(Ext2File *ext2, uint32_t blockNum, Ext2BlockGroupDescriptor *bgdt);
-bool writeBGDT(Ext2File *ext2, uint32_t blockNum, Ext2BlockGroupDescriptor *bgdt);
+
+// New function declarations
+uint32_t searchDir(Ext2File *f, uint32_t iNum, char *target);
+uint32_t traversePath(Ext2File *f, char *path);
 
 #endif
