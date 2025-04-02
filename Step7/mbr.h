@@ -14,8 +14,6 @@ typedef struct {
 MBRPartition *mbrOpen(VDIFile *vdi, int part);
 void mbrClose(MBRPartition *mbr);
 ssize_t mbrRead(MBRPartition *mbr, void *buf, size_t count);
-ssize_t mbrWrite(MBRPartition *mbr, void *buf, size_t count);
 off_t mbrSeek(MBRPartition *mbr, off_t offset, int whence);
-void displayPartitionTable(VDIFile *vdi);
 
 #endif
