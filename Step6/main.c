@@ -2,7 +2,7 @@
 #include "mbr.h"
 #include "ext2.h"
 #include "inode.h"
-#include "fileac.h"
+#include "dir.h"  // Include the new dir.h header file
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -59,19 +59,24 @@ int main() {
         fprintf(stderr, "Failed to fetch inode 11.\n");
     }
 
-    // Example usage of new functions
-    uint8_t buffer[1024];
-    if (fetchBlockFromFile(&inode, 0, buffer) == 0) {
-        printf("Block 0 fetched successfully.\n");
-    } else {
-        fprintf(stderr, "Failed to fetch block 0.\n");
-    }
+    // Example usage of directory functions
+    char name[256];
+    uint32_t iNum;
+    struct Directory *d;
 
-    if (writeBlockToFile(&inode, 0, buffer) == 0) {
-        printf("Block 0 written successfully.\n");
-    } else {
-        fprintf(stderr, "Failed to write block 0.\n");
+    printf("Root directory contents\n");
+    d = openDir(ext2, 2);
+    while (getNextDirent(d, &iNum, name)) {
+        printf("Inode: %u   name: [%s]\n", iNum, name);
     }
+    closeDir(d);
+
+    printf("\nlost+found directory contents\n");
+    d = openDir(ext2, 11);
+    while (getNextDirent(d, &iNum, name)) {
+        printf("Inode: %u   name: [%s]\n", iNum, name);
+    }
+    closeDir(d);
 
     closeExt2(ext2);
     vdiClose(vdi);
@@ -193,5 +198,4 @@ void displayInode(Ext2Inode *inode) {
     }
     printf("\nSingle indirect block: %u\n", inode->i_block[12]);
     printf("Double indirect block: %u\n", inode->i_block[13]);
-    printf("Triple indirect block: %u\n", inode->i_block[14]);
-}
+    printf("Triple ind
