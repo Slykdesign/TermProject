@@ -3,6 +3,9 @@
 
 #include "ext2.h"
 
+typedef struct {
+} Inode;
+
 int32_t fetchInode(Ext2File *f, uint32_t iNum, Ext2Inode *buf);
 int32_t writeInode(Ext2File *f, uint32_t iNum, Ext2Inode *buf);
 int32_t inodeInUse(Ext2File *f, uint32_t iNum);
