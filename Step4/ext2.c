@@ -99,52 +99,45 @@ void closeExt2(Ext2File *ext2) {
 
 // Function to read a block from the Ext2 file system
 bool fetchBlock(Ext2File *ext2, uint32_t blockNum, void *buf) {
-    off_t offset = ext2->partition->start + blockNum * ext2->block_size;
-    if (vdiSeek(ext2->vdi, offset, SEEK_SET) == (off_t)-1) return false;
-    return vdiRead(ext2->vdi, buf, ext2->block_size) == ext2->block_size;
-}
-
-// Function to write a block to the Ext2 file system
-bool writeBlock(Ext2File *ext2, uint32_t blockNum, void *buf) {
-    off_t offset = ext2->partition->start + blockNum * ext2->block_size;
-    if (vdiSeek(ext2->vdi, offset, SEEK_SET) == (off_t)-1) return false;
-    return vdiWrite(ext2->vdi, buf, ext2->block_size) == ext2->block_size;
-}
-
-// Function to read the superblock from the Ext2 file system
-bool fetchSuperblock(Ext2File *ext2, uint32_t blockNum, Ext2Superblock *sb) {
-    uint8_t buf[1024];
-    if (!fetchBlock(ext2, blockNum, buf)) return false;
-    memcpy(sb, buf, sizeof(Ext2Superblock));
-    return sb->s_magic == 0xef53;
-}
-
-// Function to write the superblock to the Ext2 file system
-bool writeSuperblock(Ext2File *ext2, uint32_t blockNum, Ext2Superblock *sb) {
-    uint8_t buf[1024] = {0};
-    memcpy(buf, sb, sizeof(Ext2Superblock));
-    return writeBlock(ext2, blockNum, buf);
-}
-
-// Function to read the block group descriptor table from the Ext2 file system
-bool fetchBGDT(Ext2File *ext2, uint32_t blockNum, Ext2BlockGroupDescriptor *bgdt) {
-    uint8_t *buf = malloc(ext2->block_size);
-    if (!buf) return false;
-    if (!fetchBlock(ext2, blockNum, buf)) {
-        free(buf);
-        return false;
-    }
-    memcpy(bgdt, buf, ext2->num_block_groups * sizeof(Ext2BlockGroupDescriptor));
-    free(buf);
+    if (!ext2 || !buf) return false;
+    off_t offset = blockNum * ext2->block_size;
+    if (vdiSeek(ext2->vdi, offset, SEEK_SET) != offset) return false;
+    if (vdiRead(ext2->vdi, buf, ext2->block_size) != ext2->block_size) return false;
     return true;
 }
 
-// Function to write the block group descriptor table to the Ext2 file system
+bool writeBlock(Ext2File *ext2, uint32_t blockNum, void *buf) {
+    if (!ext2 || !buf) return false;
+    off_t offset = blockNum * ext2->block_size;
+    if (vdiSeek(ext2->vdi, offset, SEEK_SET) != offset) return false;
+    if (vdiWrite(ext2->vdi, buf, ext2->block_size) != ext2->block_size) return false;
+    return true;
+}
+
+bool fetchSuperblock(Ext2File *ext2, uint32_t blockNum, Ext2Superblock *sb) {
+    uint8_t buf[ext2->block_size];
+    if (!fetchBlock(ext2, blockNum, buf)) return false;
+    memcpy(sb, buf + 1024 % ext2->block_size, sizeof(Ext2Superblock));
+    return true;
+}
+
+bool writeSuperblock(Ext2File *ext2, uint32_t blockNum, Ext2Superblock *sb) {
+    uint8_t buf[ext2->block_size];
+    if (!fetchBlock(ext2, blockNum, buf)) return false;
+    memcpy(buf + 1024 % ext2->block_size, sb, sizeof(Ext2Superblock));
+    return writeBlock(ext2, blockNum, buf);
+}
+
+bool fetchBGDT(Ext2File *ext2, uint32_t blockNum, Ext2BlockGroupDescriptor *bgdt) {
+    uint8_t buf[ext2->block_size];
+    if (!fetchBlock(ext2, blockNum, buf)) return false;
+    memcpy(bgdt, buf, ext2->num_block_groups * sizeof(Ext2BlockGroupDescriptor));
+    return true;
+}
+
 bool writeBGDT(Ext2File *ext2, uint32_t blockNum, Ext2BlockGroupDescriptor *bgdt) {
-    uint8_t *buf = malloc(ext2->block_size);
-    if (!buf) return false;
+    uint8_t buf[ext2->block_size];
+    if (!fetchBlock(ext2, blockNum, buf)) return false;
     memcpy(buf, bgdt, ext2->num_block_groups * sizeof(Ext2BlockGroupDescriptor));
-    bool result = writeBlock(ext2, blockNum, buf);
-    free(buf);
-    return result;
+    return writeBlock(ext2, blockNum, buf);
 }
