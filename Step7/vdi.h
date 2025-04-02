@@ -16,9 +16,7 @@ typedef struct {
 VDIFile *vdiOpen(const char *filename);
 void vdiClose(VDIFile *vdi);
 ssize_t vdiRead(VDIFile *vdi, void *buf, size_t count);
-ssize_t vdiWrite(VDIFile *vdi, void *buf, size_t count);
 off_t vdiSeek(VDIFile *vdi, off_t offset, int anchor);
 off_t vdiTranslate(VDIFile *vdi, off_t logicalOffset);
-void displayVDIHeader(VDIFile *vdi);
 
 #endif
