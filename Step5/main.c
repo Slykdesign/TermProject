@@ -1,8 +1,5 @@
-#include "vdi.h"
-#include "mbr.h"
 #include "ext2.h"
-#include "inode.h"
-#include "fileac.h"
+#include "file_access.h" // New header for file access functions
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
