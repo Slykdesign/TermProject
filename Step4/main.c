@@ -1,6 +1,5 @@
-#include "vdi.h"
-#include "mbr.h"
 #include "ext2.h"
+#include "inode.h" // Include the new inode header
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -17,19 +16,9 @@ void displayBGDT(Ext2BlockGroupDescriptor *bgdt, uint32_t num_groups);
 void displayInode(Ext2Inode *inode);
 
 int main() {
-    VDIFile *vdi = vdiOpen("./good-fixed-1k.vdi");
-    if (!vdi) {
-        printf("Failed to open VDI file.\n");
-        return 1;
-    }
-
-    printf("VDI file opened successfully.\n");
-    displayPartitionTable(vdi);
-
     Ext2File *ext2 = openExt2("./good-fixed-1k.vdi");
     if (!ext2) {
         printf("Failed to open ext2 file system.\n");
-        vdiClose(vdi);
         return 1;
     }
 
@@ -58,7 +47,6 @@ int main() {
     }
 
     closeExt2(ext2);
-    vdiClose(vdi);
     return 0;
 }
 
