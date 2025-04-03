@@ -20,62 +20,7 @@ void displayInode(Ext2Inode *inode);
 
 int main() {
     VDIFile *vdi = vdiOpen("./good-fixed-1k.vdi");
-    if (!vdi) {
-        printf("Failed to open VDI file.\n");
-        return 1;
-    }
-
-    printf("VDI file opened successfully.\n");
-    displayPartitionTable(vdi);
-
-    Ext2File *ext2 = openExt2("./good-fixed-1k.vdi");
-    if (!ext2) {
-        printf("Failed to open ext2 file system.\n");
-        vdiClose(vdi);
-        return 1;
-    }
-
-    printf("Superblock from block 0\n");
-    printf("Superblock contents:\n");
-    displaySuperblock(&ext2->superblock);
-
-    printf("Block group descriptor table:\n");
-    displayBGDT(ext2->bgdt, ext2->num_block_groups);
-
-    // Fetch and display inode 2 (root inode)
-    Ext2Inode inode;
-    if (fetchInode(ext2, 2, &inode) == 0) {
-        printf("Inode 2 (Root):\n");
-        displayInode(&inode);
-    } else {
-        fprintf(stderr, "Failed to fetch inode 2.\n");
-    }
-
-    // Fetch and display inode 11 (lost+found)
-    if (fetchInode(ext2, 11, &inode) == 0) {
-        printf("Inode 11 (lost+found):\n");
-        displayInode(&inode);
-    } else {
-        fprintf(stderr, "Failed to fetch inode 11.\n");
-    }
-
-    // Example usage of new functions
-    uint8_t buffer[1024];
-    if (fetchBlockFromFile(&inode, 0, buffer) == 0) {
-        printf("Block 0 fetched successfully.\n");
-    } else {
-        fprintf(stderr, "Failed to fetch block 0.\n");
-    }
-
-    if (writeBlockToFile(&inode, 0, buffer) == 0) {
-        printf("Block 0 written successfully.\n");
-    } else {
-        fprintf(stderr, "Failed to write block 0.\n");
-    }
-
-    closeExt2(ext2);
-    vdiClose(vdi);
-    return 0;
+    
 }
 
 // Function Definitions
