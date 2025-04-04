@@ -19,8 +19,8 @@ typedef struct {
 
 void displayPartitionTable(VDIFile *vdi) {
     PartitionEntry partitions[4];
-    lseek(vdi->fd, MBR_OFFSET, SEEK_SET);
-    read(vdi->fd, partitions, sizeof(partitions));
+    vdiSeek(vdi->fd, MBR_OFFSET, SEEK_SET);
+    vdiRead(vdi->fd, partitions, sizeof(partitions));
 
     printf("Partition Table:\n");
     for (int i = 0; i < 4; i++) {
