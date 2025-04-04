@@ -1,150 +1,123 @@
 #include "ext2.h"
-#include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
+#include <stdio.h>
 #include <string.h>
-#include <stdbool.h>
+#include <unistd.h>
 
-// Function to open the Ext2 file system
-Ext2File *openExt2(const char *filename) {
-    VDIFile *vdi = vdiOpen(filename);
-    if (!vdi) {
-        printf("Failed to open VDI file.\n");
-        return NULL;
-    }
+#define EXT2_SUPERBLOCK_OFFSET 1024
+#define EXT2_SUPERBLOCK_MAGIC 0xEF53
 
-    printf("VDI file opened successfully.\n");
-
-    // Find the first partition with type 0x83 (Linux filesystem)
+Ext2File *ext2Open(VDIFile *vdi) {
     MBRPartition *partition = NULL;
+
+    // Open first Linux partition (0x83)
     for (int i = 0; i < 4; i++) {
-        partition = mbrOpen(vdi, i);
-        if (partition) {
-            printf("Partition %d, Type: 0x%02x, Start LBA: %u, Sector Count: %u\n", i, partition->type, partition->start / 512, partition->size / 512);
-            if (partition->type == 0x83) {
-                printf("Found ext2 partition at index %d.\n", i);
+        MBRPartition *tempPart = mbrOpen(vdi, i);
+        if (tempPart) {
+            uint8_t type;
+            lseek(vdi->fd, 0x1BE + (i * 16) + 4, SEEK_SET);
+            read(vdi->fd, &type, 1);
+            if (type == 0x83) {
+                partition = tempPart;
                 break;
             }
-            mbrClose(partition);
+            mbrClose(tempPart);
         }
     }
 
-    if (!partition || partition->type != 0x83) {
+    if (!partition) {
         printf("No ext2 partition found.\n");
-        vdiClose(vdi);
         return NULL;
     }
 
-    Ext2File *ext2 = malloc(sizeof(Ext2File));
-    if (!ext2) {
-        printf("Failed to allocate memory for Ext2File.\n");
-        mbrClose(partition);
-        vdiClose(vdi);
+    Ext2File *filesize = malloc(sizeof(Ext2File));
+    if (!filesize) return NULL;
+
+    filesize->partition = partition;
+
+    // Read superblock
+    uint8_t superblock[1024];
+    fetchSuperblock(filesize, 0, superblock);
+
+    // Validate superblock
+    uint16_t magic;
+    memcpy(&magic, superblock + 56, sizeof(uint16_t)); // s_magic field
+    if (magic != EXT2_SUPERBLOCK_MAGIC) {
+        printf("Invalid ext2 superblock.\n");
+        ext2Close(filesize);
         return NULL;
     }
 
-    ext2->vdi = vdi;
-    ext2->partition = partition;
+    // Extract key filesystem parameters
+    filesize->blockSize = 1024 << *(uint32_t *)(superblock + 24); // s_log_block_size
+    filesize->numBlockGroups = (*(uint32_t *)(superblock + 4) + *(uint32_t *)(superblock + 32) - 1) / *(uint32_t *)(superblock + 32);
+    filesize->firstDataBlock = *(uint32_t *)(superblock + 20);
+    filesize->totalInodes = *(uint32_t *)(superblock + 0);
+    filesize->totalBlocks = *(uint32_t *)(superblock + 4);
 
-    // Read the superblock
-    if (!fetchSuperblock(ext2, 1, &ext2->superblock)) {
-        printf("Failed to read superblock.\n");
-        free(ext2);
-        mbrClose(partition);
-        vdiClose(vdi);
-        return NULL;
-    }
-
-    printf("Superblock read successfully.\n");
-    printf("Superblock magic number: 0x%x\n", ext2->superblock.s_magic);
-
-    // Calculate block size and number of block groups
-    ext2->block_size = 1024 << ext2->superblock.s_log_block_size;
-    ext2->num_block_groups = (ext2->superblock.s_blocks_count + ext2->superblock.s_blocks_per_group - 1) / ext2->superblock.s_blocks_per_group;
-
-    // Allocate memory for block group descriptor table
-    ext2->bgdt = malloc(ext2->num_block_groups * sizeof(Ext2BlockGroupDescriptor));
-    if (!ext2->bgdt) {
-        printf("Failed to allocate memory for block group descriptor table.\n");
-        free(ext2);
-        mbrClose(partition);
-        vdiClose(vdi);
-        return NULL;
-    }
-
-    // Fetch the block group descriptor table
-    if (!fetchBGDT(ext2, 2, ext2->bgdt)) {
-        printf("Failed to read block group descriptor table.\n");
-        free(ext2->bgdt);
-        free(ext2);
-        mbrClose(partition);
-        vdiClose(vdi);
-        return NULL;
-    }
-
-    printf("Block group descriptor table read successfully.\n");
-
-    return ext2;
+    return filesize;
 }
 
-// Function to close the Ext2 file system
-void closeExt2(Ext2File *ext2) {
-    if (ext2) {
-        free(ext2->bgdt);
-        mbrClose(ext2->partition);
-        vdiClose(ext2->vdi);
-        free(ext2);
-    }
+bool fetchBlock(Ext2File *filesize, uint32_t blockNum, void *buf) {
+    off_t offset = filesize->partition->start + (blockNum * filesize->blockSize);
+    lseek(filesize->partition->vdi->fd, offset, SEEK_SET);
+    return read(filesize->partition->vdi->fd, buf, filesize->blockSize) == filesize->blockSize;
 }
 
-// Function to read a block from the Ext2 file system
-bool fetchBlock(Ext2File *ext2, uint32_t blockNum, void *buf) {
-    off_t offset = ext2->partition->start + blockNum * ext2->block_size;
-    if (vdiSeek(ext2->vdi, offset, SEEK_SET) == (off_t)-1) return false;
-    return vdiRead(ext2->vdi, buf, ext2->block_size) == ext2->block_size;
+bool writeBlock(Ext2File *filesize, uint32_t blockNum, void *buf) {
+    off_t offset = filesize->partition->start + (blockNum * filesize->blockSize);
+    lseek(filesize->partition->vdi->fd, offset, SEEK_SET);
+    return write(filesize->partition->vdi->fd, buf, filesize->blockSize) == filesize->blockSize;
 }
 
-// Function to write a block to the Ext2 file system
-bool writeBlock(Ext2File *ext2, uint32_t blockNum, void *buf) {
-    off_t offset = ext2->partition->start + blockNum * ext2->block_size;
-    if (vdiSeek(ext2->vdi, offset, SEEK_SET) == (off_t)-1) return false;
-    return vdiWrite(ext2->vdi, buf, ext2->block_size) == ext2->block_size;
-}
+bool fetchSuperblock(Ext2File *filesize, uint32_t blockNum, void *superblock) {
+    off_t offset = filesize->partition->start + 1024;  // Superblock is always at 1024-byte offset
+    lseek(filesize->partition->vdi->fd, offset, SEEK_SET);
+    ssize_t bytesRead = read(filesize->partition->vdi->fd, superblock, 1024);
 
-// Function to read the superblock from the Ext2 file system
-bool fetchSuperblock(Ext2File *ext2, uint32_t blockNum, Ext2Superblock *sb) {
-    uint8_t buf[1024];
-    if (!fetchBlock(ext2, blockNum, buf)) return false;
-    memcpy(sb, buf, sizeof(Ext2Superblock));
-    return sb->s_magic == 0xef53;
-}
-
-// Function to write the superblock to the Ext2 file system
-bool writeSuperblock(Ext2File *ext2, uint32_t blockNum, Ext2Superblock *sb) {
-    uint8_t buf[1024] = {0};
-    memcpy(buf, sb, sizeof(Ext2Superblock));
-    return writeBlock(ext2, blockNum, buf);
-}
-
-// Function to read the block group descriptor table from the Ext2 file system
-bool fetchBGDT(Ext2File *ext2, uint32_t blockNum, Ext2BlockGroupDescriptor *bgdt) {
-    uint8_t *buf = malloc(ext2->block_size);
-    if (!buf) return false;
-    if (!fetchBlock(ext2, blockNum, buf)) {
-        free(buf);
+    if (bytesRead != 1024) {
+        printf("Error: Failed to read superblock (read %ld bytes)\n", bytesRead);
         return false;
     }
-    memcpy(bgdt, buf, ext2->num_block_groups * sizeof(Ext2BlockGroupDescriptor));
-    free(buf);
+
+    printf("Debug: Successfully read superblock at offset %ld\n", offset);
     return true;
 }
 
-// Function to write the block group descriptor table to the Ext2 file system
-bool writeBGDT(Ext2File *ext2, uint32_t blockNum, Ext2BlockGroupDescriptor *bgdt) {
-    uint8_t *buf = malloc(ext2->block_size);
-    if (!buf) return false;
-    memcpy(buf, bgdt, ext2->num_block_groups * sizeof(Ext2BlockGroupDescriptor));
-    bool result = writeBlock(ext2, blockNum, buf);
-    free(buf);
-    return result;
+bool writeSuperblock(Ext2File *filesize, uint32_t blockNum, void *superblock) {
+    return writeBlock(filesize, filesize->firstDataBlock + blockNum, superblock);
+}
+
+bool fetchBGDT(Ext2File *filesize, uint32_t blockNum, void *bgdt) {
+    return fetchBlock(filesize, filesize->firstDataBlock + blockNum, bgdt);
+}
+
+bool writeBGDT(Ext2File *filesize, uint32_t blockNum, void *bgdt) {
+    return writeBlock(filesize, filesize->firstDataBlock + blockNum, bgdt);
+}
+
+void displaySuperblock(Ext2File *filesize, void *superblock) {
+    printf("Superblock Information:\n");
+    printf("Total Inodes: %u\n", *(uint32_t *)(superblock + 0));
+    printf("Total Blocks: %u\n", *(uint32_t *)(superblock + 4));
+    printf("Block Size: %u\n", filesize->blockSize);
+    printf("First Data Block: %u\n", *(uint32_t *)(superblock + 20));
+    printf("Magic Number: 0x%X\n", *(uint16_t *)(superblock + 56));
+}
+
+void displayBGDT(Ext2File *filesize, void *bgdt) {
+    printf("\nBlock Group Descriptor Table:\n");
+    printf("Block Bitmap: %u\n", *(uint32_t *)(bgdt + 0));
+    printf("Inode Bitmap: %u\n", *(uint32_t *)(bgdt + 4));
+    printf("Inode Table: %u\n", *(uint32_t *)(bgdt + 8));
+    printf("Free Blocks Count: %u\n", *(uint16_t *)(bgdt + 12));
+    printf("Free Inodes Count: %u\n", *(uint16_t *)(bgdt + 14));
+    printf("Used Directories Count: %u\n", *(uint16_t *)(bgdt + 16));
+}
+
+void ext2Close(Ext2File *filesize) {
+    if (filesize) {
+        mbrClose(filesize->partition);
+        free(filesize);
+    }
 }
