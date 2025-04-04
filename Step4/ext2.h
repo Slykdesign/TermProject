@@ -1,3 +1,9 @@
+#ifndef EXT2_H
+#define EXT2_H
+
+#include <stdbool.h>
+#include "mbr.h"
+
 typedef struct {
     MBRPartition *partition;
     uint32_t blockSize;
