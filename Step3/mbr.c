@@ -36,8 +36,12 @@ MBRPartition *mbrOpen(VDIFile *vdi, int part) {
     if (part < 0 || part > 3) return NULL;
 
     PartitionEntry partitions[4];
-    lseek(vdi->fd, MBR_OFFSET, SEEK_SET);
-    read(vdi->fd, partitions, sizeof(partitions));
+    vdiSeek(vdi->fd, MBR_OFFSET, SEEK_SET);
+    vdiRead(vdi->fd, partitions, sizeof(partitions));
+
+    printf("lba: %lu\n",&partitions[part].lbaCount);
+    // Make your own mbr file
+    // use vdiSeek and vdiRead instead of lseek and read in MBRPartition *mbrOpen
 
     if (partitions[part].lbaCount == 0) {
         printf("Partition %d is empty.\n", part);
