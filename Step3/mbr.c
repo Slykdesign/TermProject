@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <string.h>
 #include <unistd.h>
 
 #define SECTOR_SIZE 512
@@ -19,16 +18,18 @@ typedef struct {
 
 void displayPartitionTable(VDIFile *vdi) {
     PartitionEntry partitions[4];
-    vdiSeek(vdi->fd, MBR_OFFSET, SEEK_SET);
-    vdiRead(vdi->fd, partitions, sizeof(partitions));
+    lseek(vdi->fd, MBR_OFFSET, SEEK_SET);
+    read(vdi->fd, partitions, sizeof(partitions));
 
     printf("Partition Table:\n");
     for (int i = 0; i < 4; i++) {
-        printf("Partition %d:\n", i);
+        printf("Partition table entry %d:\n", i);
         printf("  Status: %s\n", (partitions[i].status == 0x80) ? "Active" : "Inactive");
-        printf("  Type: 0x%02x\n", partitions[i].type);
-        printf("  Start LBA: %u\n", partitions[i].lbaFirst);
-        printf("  Sector Count: %u\n", partitions[i].lbaCount);
+        printf("  First sector CHS: %d-%d-%d\n", partitions[i].chsFirst[0], partitions[i].chsFirst[1], partitions[i].chsFirst[2]);
+        printf("  Last sector CHS: %d-%d-%d\n", partitions[i].chsLast[0], partitions[i].chsLast[1], partitions[i].chsLast[2]);
+        printf("  Partition type: %02x %s\n", partitions[i].type, (partitions[i].type == 0x83) ? "linux native" : "empty");
+        printf("  First LBA sector: %u\n", partitions[i].lbaFirst);
+        printf("  LBA sector count: %u\n", partitions[i].lbaCount);
     }
 }
 
