@@ -16,6 +16,8 @@ void displaySuperblock(MBRPartition *partition);
 int main() {
     VDIFile *vdi = vdiOpen("./good-fixed-1k.vdi");
     if (!vdi) return 1;
+
+    printf("Output from good-fixed-1k.vdi:\n");
     displayPartitionTable(vdi);
 
     MBRPartition *partition = mbrOpen(vdi, 0);
@@ -65,5 +67,5 @@ void displaySuperblock(MBRPartition *partition) {
     mbrSeek(partition, 1024, SEEK_SET);  // Seek to superblock offset
     mbrRead(partition, buffer, BUFFER_SIZE);
     printf("Superblock:\n");
-    displayBuffer((uint8_t *)buffer, BUFFER_SIZE, 1024);
+    displayBuffer((uint8_t *)buffer, BUFFER_SIZE, 0);  // Display buffer with proper offset
 }
