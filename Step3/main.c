@@ -12,7 +12,7 @@ void displayBufferPage(uint8_t *buf, uint32_t count, uint32_t skip, uint64_t off
 void displayBuffer(uint8_t *buf, uint32_t count, uint64_t offset);
 
 int main() {
-    VDIFile *vdi = vdiOpen("/home/csis/Desktop/TermProject/good-fixed-1k.vdi");
+    VDIFile *vdi = vdiOpen("./good-fixed-1k.vdi");
     if (!vdi) return 1;
 
     Ext2File *filesize = ext2Open(vdi);
