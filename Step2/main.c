@@ -11,11 +11,11 @@
 // Function prototypes
 void displayBufferPage(uint8_t *buf, uint32_t count, uint32_t skip, uint64_t offset);
 void displayBuffer(uint8_t *buf, uint32_t count, uint64_t offset);
+void displaySuperblock(MBRPartition *partition);
 
 int main() {
     VDIFile *vdi = vdiOpen("./good-fixed-1k.vdi");
     if (!vdi) return 1;
-
     displayPartitionTable(vdi);
 
     MBRPartition *partition = mbrOpen(vdi, 0);
@@ -29,6 +29,8 @@ int main() {
     mbrSeek(partition, 0, SEEK_SET);
     mbrRead(partition, buffer, 512);
     printf("Read first sector of partition:\n%.*s\n", 512, buffer);
+
+    displaySuperblock(partition);
 
     mbrClose(partition);
     vdiClose(vdi);
@@ -56,4 +58,12 @@ void displayBuffer(uint8_t *buf, uint32_t count, uint64_t offset) {
     for (uint32_t i = 0; i < count; i += step) {
         displayBufferPage(buf, count, i, offset + i);
     }
+}
+
+void displaySuperblock(MBRPartition *partition) {
+    char buffer[BUFFER_SIZE];
+    mbrSeek(partition, 1024, SEEK_SET);  // Seek to superblock offset
+    mbrRead(partition, buffer, BUFFER_SIZE);
+    printf("Superblock:\n");
+    displayBuffer((uint8_t *)buffer, BUFFER_SIZE, 1024);
 }
