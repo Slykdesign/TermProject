@@ -58,6 +58,13 @@ Ext2File *ext2Open(VDIFile *vdi) {
     return filesize;
 }
 
+void ext2Close(Ext2File *filesize) {
+    if (filesize) {
+        mbrClose(filesize->partition);
+        free(filesize);
+    }
+}
+
 bool fetchBlock(Ext2File *filesize, uint32_t blockNum, void *buf) {
     off_t offset = filesize->partition->start + (blockNum * filesize->blockSize);
     lseek(filesize->partition->vdi->fd, offset, SEEK_SET);
@@ -113,11 +120,4 @@ void displayBGDT(Ext2File *filesize, void *bgdt) {
     printf("Free Blocks Count: %u\n", *(uint16_t *)(bgdt + 12));
     printf("Free Inodes Count: %u\n", *(uint16_t *)(bgdt + 14));
     printf("Used Directories Count: %u\n", *(uint16_t *)(bgdt + 16));
-}
-
-void ext2Close(Ext2File *filesize) {
-    if (filesize) {
-        mbrClose(filesize->partition);
-        free(filesize);
-    }
 }
